@@ -1,3 +1,108 @@
+import numpy as np
+import time
+import matplotlib.pyplot as plt
+
+class ConnectFour:
+    def __init__(self):
+        self.board = np.zeros((6, 7), dtype=int)
+        self.current_player = 1
+        self.moves = []
+
+    def print_board(self):
+        print(self.board)
+
+    def make_move(self, column):
+        for row in range(5, -1, -1):
+            if self.board[row][column] == 0:
+                self.board[row][column] = self.current_player
+                self.moves.append((self.current_player, column))
+                return True
+        return False
+
+    def check_winner(self):
+        # Check rows
+        for row in range(6):
+            for col in range(4):
+                if self.board[row][col] == self.board[row][col + 1] == self.board[row][col + 2] == self.board[row][
+                    col + 3] != 0:
+                    return self.board[row][col]
+
+        # Check columns
+        for col in range(7):
+            for row in range(3):
+                if self.board[row][col] == self.board[row + 1][col] == self.board[row + 2][col] == self.board[row + 3][
+                    col] != 0:
+                    return self.board[row][col]
+
+        # Check diagonals
+        for row in range(3):
+            for col in range(4):
+                if self.board[row][col] == self.board[row + 1][col + 1] == self.board[row + 2][col + 2] == \
+                        self.board[row + 3][col + 3] != 0:
+                    return self.board[row][col]
+
+        for row in range(3, 6):
+            for col in range(4):
+                if self.board[row][col] == self.board[row - 1][col + 1] == self.board[row - 2][col + 2] == \
+                        self.board[row - 3][col + 3] != 0:
+                    return self.board[row][col]
+
+        return 0
+
+    def switch_player(self):
+        self.current_player = 1 if self.current_player == 2 else 2
+
+    def get_possible_moves(self):
+        return [col for col in range(7) if self.board[0][col] == 0]
+
+    def is_board_full(self):
+        return np.all(self.board != 0)
+
+def basic_negamax(board, depth, maximizing_player):
+    if depth == 0 or board.check_winner() != 0:
+        return 0
+
+    max_eval = float('-inf')
+    for move in board.get_possible_moves():
+        new_board = ConnectFour()
+        new_board.board = np.copy(board.board)
+        new_board.make_move(move)
+        eval = -basic_negamax(new_board, depth - 1, not maximizing_player)
+        max_eval = max(max_eval, eval)
+    return max_eval
+
+def negamax_alpha_beta(board, depth, alpha, beta, maximizing_player):
+    if depth == 0 or board.check_winner() != 0:
+        return 0
+
+    max_eval = float('-inf')
+    for move in board.get_possible_moves():
+        new_board = ConnectFour()
+        new_board.board = np.copy(board.board)
+        new_board.make_move(move)
+        eval = -negamax_alpha_beta(new_board, depth - 1, -beta, -alpha, not maximizing_player)
+        max_eval = max(max_eval, eval)
+        alpha = max(alpha, eval)
+        if alpha >= beta:
+            break
+    return max_eval
+
+def negamax_alpha_beta_symmetry(board, depth, alpha, beta, maximizing_player):
+    if depth == 0 or board.check_winner() != 0:
+        return 0
+
+    max_eval = float('-inf')
+    for move in board.get_possible_moves():
+        new_board = ConnectFour()
+        new_board.board = np.copy(board.board)
+        new_board.make_move(move)
+        eval = -negamax_alpha_beta_symmetry(new_board, depth - 1, -beta, -alpha, not maximizing_player)
+        max_eval = max(max_eval, eval)
+        alpha = max(alpha, eval)
+        if alpha >= beta:
+            break
+    return max_eval
+
 def run_experiment(board, depth):
     basic_times = []
     alpha_beta_times = []
@@ -19,18 +124,21 @@ def run_experiment(board, depth):
         negamax_alpha_beta_symmetry(board, depth, float('-inf'), float('inf'), True)
         alpha_beta_symmetry_times.append(time.time() - start_time)
 
-        # User's move
-        user_input = input("Enter your move (column number 0-6): ")
-        column = int(user_input)
-        if column < 0 or column > 6 or board.board[0][column] != 0:
-            print("Invalid move. Try again.")
-            continue
-        board.make_move(column)
-        board.print_board()
+        # User's move (assuming predefined moves)
+        if predefined_moves:
+            row, column = predefined_moves.pop(0)
+            board.make_move(column)  # Pass only the column as an argument
+            board.print_board()
+        else:
+            print("No more predefined moves.")
+            break
 
     return basic_times, alpha_beta_times, alpha_beta_symmetry_times
 
-# Start of the experiment
+# Predefined moves
+predefined_moves = [(5, 3), (5, 0), (5, 1), (4, 0), (4, 1), (4, 3)]
+
+# start of experiment
 board = ConnectFour()
 depth = 4
 basic_times, alpha_beta_times, alpha_beta_symmetry_times = run_experiment(board, depth)
